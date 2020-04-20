@@ -2,6 +2,7 @@ import sys
 import finviz
 import xlwt
 
+
 def to_excel(filename, sheetname, keys, values, verbose=False):
     if verbose:
         print('Export to excel file =', filename, ' sheetname =', sheetname)
@@ -22,7 +23,8 @@ def to_excel(filename, sheetname, keys, values, verbose=False):
         for i in range(0, len(v)):
             try:
                 if '%' in v[i]:
-                    ws.write(line, i + 1, float(v[i][:-1].strip())/100, percentage_style)
+                    ws.write(
+                        line, i + 1, float(v[i][:-1].strip()) / 100, percentage_style)
                 else:
                     ws.write(line, i + 1, float(v[i].strip()))
             except:
@@ -30,6 +32,7 @@ def to_excel(filename, sheetname, keys, values, verbose=False):
         line += 1
 
     wb.save(filename)
+
 
 def to_stdout(keys, values, space_char, verbose=False):
     print('Ticker', end=space_char)
@@ -42,6 +45,7 @@ def to_stdout(keys, values, space_char, verbose=False):
         for i in range(0, len(v)):
             print(v[i], end=space_char)
         print()
+
 
 show_help = False
 verbose_mode = False

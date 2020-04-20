@@ -3,12 +3,13 @@ from bs4 import BeautifulSoup
 
 SOURCE_URL = 'https://finviz.com/quote.ashx?t='
 
+
 def scrab(tic, keys, verbose=False):
     if len(tic) == 0:
         raise ValueError('Scrabing needs TIC')
 
     if verbose:
-        print('get webpage from', SOURCE_URL+tic)
+        print('get webpage from', SOURCE_URL + tic)
 
     response = urlopen(SOURCE_URL + tic)
 
