@@ -1,17 +1,20 @@
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
 SOURCE_URL = 'https://finviz.com/quote.ashx?t='
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:75.0) Gecko/20100101 Firefox/75.0'
 
 
 def scrab(tic, keys, verbose=False):
     if len(tic) == 0:
         raise ValueError('Scrabing needs TIC')
 
-    if verbose:
-        print('get webpage from', SOURCE_URL + tic)
+    source_url = ''.join([SOURCE_URL, tic])
 
-    response = urlopen(SOURCE_URL + tic)
+    if verbose:
+        print('get webpage from', source_url)
+
+    response = urlopen(Request(source_url, headers={'User-Agent': USER_AGENT}))
 
     html = response.read().decode('utf8')
 
