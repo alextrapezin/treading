@@ -1,15 +1,21 @@
 import sys
-import finviz
+from finviz import FinViz
 import xlwt
 import argparse
+from threading import Thread
+import time
 
 
 def to_excel(filename, sheetname, keys, values, verbose=False):
+    assert not (filename is None or filename == ''), 'filename is empty'
+    assert not (sheetname is None or sheetname == ''), 'sheetname is empty'
+
+    if len(keys) == 0 or len(values) == 0:
+        return
+
     if verbose:
         print('Export to excel file =', filename, ' sheetname =', sheetname)
-    if len(filename) == 0 or len(sheetname) == 0 or len(
-            keys) == 0 or len(values) == 0:
-        raise ValueError('Export needs filename, sheetname, keys and values')
+
     wb = xlwt.Workbook()
     ws = wb.add_sheet(sheetname)
     percentage_style = xlwt.XFStyle()
@@ -39,6 +45,9 @@ def to_excel(filename, sheetname, keys, values, verbose=False):
 
 
 def to_stdout(keys, values, space_char):
+    if len(keys) == 0 or len(values) == 0:
+        return
+
     print('Ticker', end=space_char)
     for i in range(0, len(keys)):
         print(keys[i], end=space_char)
@@ -50,8 +59,7 @@ def to_stdout(keys, values, space_char):
             print(v[i], end=space_char)
         print()
 
-
-def main():
+def get_args():
     parser = argparse.ArgumentParser(description='FinViz scrabing...')
     parser.add_argument(
         'tickers',
@@ -73,26 +81,33 @@ def main():
         metavar=(
             'filename',
             'sheetname'))
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    if args.verbose:
-        print(args)
-
+def main():
+    args = get_args()
     keys = []
     values = {}
 
-    tickers = args.tickers[0].split()
+    tickers = ' '.join(args.tickers).split()
 
     if not args.silent:
-        print(tickers)
+        print(*tickers)
 
+    if not args.silent:
+        start_time = time.time()
+
+    finviz = FinViz()
+    threads = []
     for tic in tickers:
-        tic = tic[0:10]
-        if not args.silent:
-            print('scrabing', tic, '...')
-        value = []
-        keys, value = finviz.scrab(tic, keys, verbose=args.verbose)
-        values[tic] = value
+        t = Thread(target=finviz.scrab, args=(tic, keys, values))
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+    # sort values by keys
+    values = dict(sorted(values.items()))
 
     if args.verbose:
         print('values = ', values)
@@ -105,7 +120,12 @@ def main():
         to_excel(args.excel[0], args.excel[1], keys, values, args.verbose)
 
     if not args.silent:
-        print('scabbing completed')
+        print(
+            'scabbing completed. It takes {} seconds'.format(
+                round(
+                    time.time() -
+                    start_time,
+                    2)))
 
 
 if __name__ == "__main__":
