@@ -81,10 +81,12 @@ def main():
     keys = []
     values = {}
 
-    if not args.silent:
-        print(*args.tickers)
+    tickers = args.tickers[0].split()
 
-    for tic in args.tickers:
+    if not args.silent:
+        print(tickers)
+
+    for tic in tickers:
         tic = tic[0:10]
         if not args.silent:
             print('scrabing', tic, '...')
