@@ -1,5 +1,6 @@
 ###
 *.xls
+*.xlsx
 *.sh
 .DS_Store
 

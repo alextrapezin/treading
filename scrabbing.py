@@ -1,63 +1,63 @@
-import sys
 from finviz import FinViz
-import xlwt
 import argparse
 from threading import Thread
 import time
+from openpyxl import Workbook, load_workbook
+import os.path
 
 
-def to_excel(filename, sheetname, keys, values, verbose=False):
+def to_excel(filename, sheetname, values, verbose=False):
     assert not (filename is None or filename == ''), 'filename is empty'
     assert not (sheetname is None or sheetname == ''), 'sheetname is empty'
 
-    if len(keys) == 0 or len(values) == 0:
+    if len(values) == 0:
         return
 
     if verbose:
         print('Export to excel file =', filename, ' sheetname =', sheetname)
 
-    wb = xlwt.Workbook()
-    ws = wb.add_sheet(sheetname)
-    percentage_style = xlwt.XFStyle()
-    percentage_style.num_format_str = '0.00%'
+    if os.path.exists(filename) and os.path.isfile(filename):
+        # add data in exists file
+        wb = load_workbook(filename=filename)
+        if sheetname in wb.sheetnames:
+            del wb[sheetname]
+        ws = wb.create_sheet(sheetname)
+    else:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = sheetname
 
-    ws.write(0, 0, 'Ticker')
-    for i in range(0, len(keys)):
-        ws.write(0, i + 1, keys[i])
+    # write header of table
+    ws.cell(row=1, column=1).value = 'Ticker'
+    for k1, v1 in values.items():
+        for i, k in enumerate(v1.keys()):
+            ws.cell(row=1, column=i + 2).value = k
+        break
 
-    line = 1
-    for k, v in values.items():
-        ws.write(line, 0, k)
-        for i in range(0, len(v)):
-            try:
-                if '%' in v[i]:
-                    ws.write(line,
-                             i + 1,
-                             float(v[i][:-1].strip()) / 100,
-                             percentage_style)
-                else:
-                    ws.write(line, i + 1, float(v[i].strip()))
-            except BaseException:
-                ws.write(line, i + 1, v[i].strip())
+    line = 2
+    for k, v1 in values.items():
+        ws.cell(row=line, column=1).value = k
+        for i, v2 in enumerate(v1.values()):
+            ws.cell(row=line, column=i + 2).value = v2
+            if type(v2) in ('float', 'int'):
+                ws.cell(row=line, column=i + 2).number_format = '0.00'
         line += 1
 
     wb.save(filename)
 
 
-def to_stdout(keys, values, space_char):
-    if len(keys) == 0 or len(values) == 0:
+def to_stdout(values, space_char):
+    if len(values) == 0:
         return
 
-    print('Ticker', end=space_char)
-    for i in range(0, len(keys)):
-        print(keys[i], end=space_char)
-    print()
-
     for k, v in values.items():
-        print(k, end=space_char)
-        for i in range(0, len(v)):
-            print(v[i], end=space_char)
+        print('Ticker', end=space_char)
+        print(k)
+        for k2, v2 in v.items():
+            print(k2, end=space_char)
+            print(v2)
         print()
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='FinViz scrabing...')
@@ -83,9 +83,12 @@ def get_args():
             'sheetname'))
     return parser.parse_args()
 
+def _scrab(tic, values):
+    fz = FinViz(tic=tic)
+    values[tic] = fz.get_values()
+
 def main():
     args = get_args()
-    keys = []
     values = {}
 
     tickers = ' '.join(args.tickers).split()
@@ -96,10 +99,9 @@ def main():
     if not args.silent:
         start_time = time.time()
 
-    finviz = FinViz()
     threads = []
     for tic in tickers:
-        t = Thread(target=finviz.scrab, args=(tic, keys, values))
+        t = Thread(target=_scrab, args=(tic, values))
         t.start()
         threads.append(t)
 
@@ -113,11 +115,11 @@ def main():
         print('values = ', values)
 
     if args.excel is None:
-        to_stdout(keys, values, '\t')
+        to_stdout(values, '\t')
     else:
         if not args.silent:
             print('exporting to', args.excel[0])
-        to_excel(args.excel[0], args.excel[1], keys, values, args.verbose)
+        to_excel(args.excel[0], args.excel[1], values, args.verbose)
 
     if not args.silent:
         print(
